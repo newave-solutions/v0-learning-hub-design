@@ -7,7 +7,7 @@ import { Button } from "@/components/ui/button"
 import { Progress } from "@/components/ui/progress"
 import { ReadingPassage } from "@/components/learning/reading-passage"
 import { VocabularyDragDrop } from "@/components/learning/vocabulary-drag-drop"
-import { ExpandableCard } from "@/components/learning/expandable-card"
+import { ExpandableActivity } from "@/components/learning/expandable-activity"
 import { VideoLesson } from "@/components/learning/video-lesson"
 import { ImageVocabulary } from "@/components/learning/image-vocabulary"
 import { QuizCard } from "@/components/learning/quiz-card"
@@ -138,12 +138,14 @@ export function ModuleClient({ pathId, module, nextModule }: ModuleClientProps) 
 
               case "expandable":
                 return (
-                  <div key={activity.id} className="space-y-3">
-                    <h3 className="text-xl font-semibold">{activity.title}</h3>
-                    {activity.data.cards.map((card: any, index: number) => (
-                      <ExpandableCard key={index} title={card.title} summary={card.summary} content={card.content} />
-                    ))}
-                  </div>
+                  <ExpandableActivity
+                    key={activity.id}
+                    title={activity.title}
+                    cards={activity.data.cards}
+                    points={activity.points}
+                    isCompleted={isCompleted}
+                    onComplete={() => handleActivityComplete(activity.id, activity.points)}
+                  />
                 )
 
               case "video":

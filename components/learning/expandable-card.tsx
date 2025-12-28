@@ -2,22 +2,38 @@
 
 import { useState } from "react"
 import { Card } from "@/components/ui/card"
-import { ChevronDown, FileText } from "lucide-react"
+import { ChevronDown, FileText, CheckCircle2 } from "lucide-react"
 
 interface ExpandableCardProps {
   title: string
   summary: string
   content: string
   color?: string
+  onExpand?: () => void
+  isViewed?: boolean
 }
 
-export function ExpandableCard({ title, summary, content, color = "text-chart-3" }: ExpandableCardProps) {
+export function ExpandableCard({
+  title,
+  summary,
+  content,
+  color = "text-chart-3",
+  onExpand,
+  isViewed = false,
+}: ExpandableCardProps) {
   const [isExpanded, setIsExpanded] = useState(false)
+
+  const handleClick = () => {
+    if (!isExpanded && onExpand) {
+      onExpand()
+    }
+    setIsExpanded(!isExpanded)
+  }
 
   return (
     <Card className="overflow-hidden">
       <button
-        onClick={() => setIsExpanded(!isExpanded)}
+        onClick={handleClick}
         className="w-full p-6 text-left transition-colors hover:bg-muted/50"
       >
         <div className="flex items-start justify-between gap-4">
@@ -26,7 +42,10 @@ export function ExpandableCard({ title, summary, content, color = "text-chart-3"
               <FileText className="h-5 w-5" />
             </div>
             <div className="flex-1">
-              <h3 className="text-lg font-semibold mb-1 text-balance">{title}</h3>
+              <div className="flex items-center gap-2">
+                <h3 className="text-lg font-semibold mb-1 text-balance">{title}</h3>
+                {isViewed && <CheckCircle2 className="h-4 w-4 text-green-500 shrink-0" />}
+              </div>
               <p className="text-sm text-muted-foreground text-pretty">{summary}</p>
             </div>
           </div>
