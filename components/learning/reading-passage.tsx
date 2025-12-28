@@ -56,9 +56,8 @@ export function ReadingPassage({
           {completed && <CheckCircle2 className="h-6 w-6 text-green-500" />}
         </div>
 
-        <div className="prose prose-sm dark:prose-invert max-w-none">
+        <div className="prose prose-sm dark:prose-invert max-w-none text-foreground leading-relaxed space-y-4 text-pretty">
           <ReactMarkdown
-            className="text-foreground leading-relaxed space-y-4 text-pretty"
             components={{
               h1: ({ children }) => <h1 className="text-2xl font-bold mb-4 mt-6">{children}</h1>,
               h2: ({ children }) => <h2 className="text-xl font-semibold mb-3 mt-5">{children}</h2>,
