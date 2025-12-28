@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useState, useEffect } from "react"
 import { Card } from "@/components/ui/card"
 import { Button } from "@/components/ui/button"
 import { BookOpen, CheckCircle2 } from "lucide-react"
@@ -12,15 +12,31 @@ interface ReadingPassageProps {
   estimatedTime: number
   onComplete: () => void
   points: number
+  isCompleted?: boolean
 }
 
-export function ReadingPassage({ title, content, estimatedTime, onComplete, points }: ReadingPassageProps) {
-  const [isCompleted, setIsCompleted] = useState(false)
+export function ReadingPassage({
+  title,
+  content,
+  estimatedTime,
+  onComplete,
+  points,
+  isCompleted = false,
+}: ReadingPassageProps) {
+  const [localCompleted, setLocalCompleted] = useState(isCompleted)
+
+  useEffect(() => {
+    if (isCompleted) {
+      setLocalCompleted(true)
+    }
+  }, [isCompleted])
 
   const handleComplete = () => {
-    setIsCompleted(true)
+    setLocalCompleted(true)
     onComplete()
   }
+
+  const completed = isCompleted || localCompleted
 
   return (
     <Card className="p-6">
@@ -37,7 +53,7 @@ export function ReadingPassage({ title, content, estimatedTime, onComplete, poin
               </p>
             </div>
           </div>
-          {isCompleted && <CheckCircle2 className="h-6 w-6 text-accent" />}
+          {completed && <CheckCircle2 className="h-6 w-6 text-green-500" />}
         </div>
 
         <div className="prose prose-sm dark:prose-invert max-w-none">
@@ -58,7 +74,7 @@ export function ReadingPassage({ title, content, estimatedTime, onComplete, poin
           </ReactMarkdown>
         </div>
 
-        {!isCompleted && (
+        {!completed && (
           <div className="pt-4 border-t border-border">
             <Button onClick={handleComplete} className="w-full md:w-auto">
               Mark as Complete
