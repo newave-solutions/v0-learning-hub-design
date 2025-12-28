@@ -461,6 +461,34 @@ The application currently includes:
 - Auth context (`/lib/auth-context.tsx`) for managing authentication state
 - Mock authentication for demonstration purposes
 
+**Sign-In Page Features:**
+- Google OAuth button for one-click authentication
+- Email/password form with validation
+- "Forgot password" link for password recovery
+- Link to sign-up page for new users
+- Responsive design with mobile support
+- Visual feedback during loading states
+- Preview statistics showing platform features
+
+**Sign-Up Page Features:**
+- Google OAuth button for quick registration
+- Email/password registration form with name field
+- Minimum password length requirement (8 characters)
+- Visual indicators for password requirements
+- Benefits list highlighting platform features
+- Link to sign-in page for existing users
+- Responsive mobile-first design
+- Loading states for better UX
+
+**Authentication Flow:**
+1. User visits `/sign-in` or `/sign-up`
+2. Chooses OAuth (Google) or email/password method
+3. For OAuth: Redirected to Google consent screen
+4. For email/password: Form validation and submission
+5. On success: User authenticated and redirected to dashboard
+6. Auth state stored in localStorage and React Context
+7. Protected routes check authentication status
+
 **Production Implementation Checklist:**
 
 - [ ] Install NextAuth.js: `npm install next-auth`
@@ -538,6 +566,57 @@ describe('Authentication', () => {
     it('should update password with valid token')
   })
 })
+```
+
+#### Authentication Routes
+
+The application provides the following authentication routes:
+
+| Route | Purpose | Access |
+|-------|---------|--------|
+| `/sign-in` | User login with OAuth or email/password | Public |
+| `/sign-up` | New user registration | Public |
+| `/forgot-password` | Password reset request | Public |
+| `/reset-password/[token]` | Password reset confirmation | Public with valid token |
+| `/verify-email/[token]` | Email verification | Public with valid token |
+| `/api/auth/callback/google` | Google OAuth callback | Internal |
+| `/` (Dashboard) | Main application | Protected (requires auth) |
+| `/learn/*` | Learning paths and modules | Protected (requires auth) |
+
+**Route Protection Implementation:**
+
+```typescript
+// Example middleware for protected routes
+import { NextResponse } from 'next/server'
+import type { NextRequest } from 'next/server'
+
+export function middleware(request: NextRequest) {
+  const token = request.cookies.get('next-auth.session-token')
+  
+  // Protected routes
+  const protectedPaths = ['/learn', '/profile', '/settings']
+  const isProtectedPath = protectedPaths.some(path => 
+    request.nextUrl.pathname.startsWith(path)
+  )
+  
+  // Redirect to sign-in if not authenticated
+  if (isProtectedPath && !token) {
+    return NextResponse.redirect(new URL('/sign-in', request.url))
+  }
+  
+  // Redirect to dashboard if already authenticated
+  const authPaths = ['/sign-in', '/sign-up']
+  const isAuthPath = authPaths.includes(request.nextUrl.pathname)
+  if (isAuthPath && token) {
+    return NextResponse.redirect(new URL('/', request.url))
+  }
+  
+  return NextResponse.next()
+}
+
+export const config = {
+  matcher: ['/learn/:path*', '/profile/:path*', '/settings/:path*', '/sign-in', '/sign-up']
+}
 ```
 
 ## 🔍 Five Areas for UX Improvement
