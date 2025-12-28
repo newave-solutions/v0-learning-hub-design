@@ -117,6 +117,30 @@ npm run build
 npm start
 ```
 
+### Authentication Setup
+
+The application includes authentication pages with OAuth and email/password support. For detailed setup instructions, see [PROJECT_OVERVIEW.md](./PROJECT_OVERVIEW.md#-authentication--security).
+
+**Quick Setup:**
+
+1. Copy the example environment file:
+```bash
+cp .env.example .env.local
+```
+
+2. Configure Google OAuth (optional):
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Create OAuth 2.0 credentials
+   - Add credentials to `.env.local`
+
+3. Generate NextAuth secret:
+```bash
+openssl rand -base64 32
+```
+   - Add the generated secret to `.env.local` as `NEXTAUTH_SECRET`
+
+**Note**: The current implementation uses mock authentication for demonstration. For production deployment, follow the complete setup guide in PROJECT_OVERVIEW.md.
+
 ## 📖 Learning Paths
 
 ### Phase 1: The BS Detector (280 XP)

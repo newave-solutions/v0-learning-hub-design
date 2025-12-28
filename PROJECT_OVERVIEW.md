@@ -270,6 +270,276 @@ Learners will develop:
 - Commitment to continuous learning
 - Professional development practices
 
+## 🔐 Authentication & Security
+
+### OAuth Sign-In Implementation
+
+The AI Learning Hub implements a comprehensive authentication system that supports both OAuth (Google) and traditional email/password authentication. This section outlines the implementation details, security best practices, and setup instructions.
+
+#### OAuth Provider Setup (Google Authentication)
+
+**1. Google Cloud Console Configuration**
+
+To enable Google OAuth authentication, you need to configure a project in the Google Cloud Console:
+
+1. **Create a Google Cloud Project**
+   - Visit [Google Cloud Console](https://console.cloud.google.com/)
+   - Create a new project or select an existing one
+   - Enable the Google+ API for your project
+
+2. **Configure OAuth Consent Screen**
+   - Navigate to "APIs & Services" > "OAuth consent screen"
+   - Choose "External" for user type (or "Internal" for Google Workspace organizations)
+   - Fill in required information:
+     - App name: "AI Learning Hub"
+     - User support email: Your support email
+     - Developer contact email: Your contact email
+   - Add scopes: `userinfo.email`, `userinfo.profile`, and `openid`
+   - Add test users during development phase
+
+3. **Create OAuth 2.0 Credentials**
+   - Navigate to "APIs & Services" > "Credentials"
+   - Click "Create Credentials" > "OAuth client ID"
+   - Choose "Web application" as application type
+   - Configure authorized origins:
+     - Development: `http://localhost:3000`
+     - Production: `https://your-domain.com`
+   - Configure authorized redirect URIs:
+     - Development: `http://localhost:3000/api/auth/callback/google`
+     - Production: `https://your-domain.com/api/auth/callback/google`
+   - Save the Client ID and Client Secret
+
+**2. Environment Variables Configuration**
+
+Create a `.env.local` file in the root directory with the following variables:
+
+```env
+# Google OAuth Configuration
+GOOGLE_CLIENT_ID=your_google_client_id_here
+GOOGLE_CLIENT_SECRET=your_google_client_secret_here
+
+# NextAuth Configuration
+NEXTAUTH_URL=http://localhost:3000
+NEXTAUTH_SECRET=your_nextauth_secret_here
+
+# Generate NEXTAUTH_SECRET with: openssl rand -base64 32
+```
+
+**3. Security Best Practices for OAuth**
+
+- **Client Secret Protection**: Never commit the `.env.local` file to version control
+- **HTTPS Only**: Always use HTTPS in production for OAuth redirects
+- **State Parameter**: Implement CSRF protection using state parameter (handled by NextAuth.js)
+- **Token Storage**: Store access tokens securely, never in localStorage
+- **Token Refresh**: Implement token refresh logic to maintain user sessions
+- **Scope Limitation**: Request only the minimum required OAuth scopes
+- **Callback Validation**: Always validate OAuth callbacks and state parameters
+
+#### Username and Password Best Practices
+
+**1. Password Requirements**
+
+Implement strong password requirements following OWASP guidelines:
+
+```typescript
+// Password validation criteria
+const passwordRequirements = {
+  minLength: 8,           // Minimum 8 characters
+  maxLength: 128,         // Maximum 128 characters
+  requireUppercase: true, // At least one uppercase letter
+  requireLowercase: true, // At least one lowercase letter
+  requireNumbers: true,   // At least one number
+  requireSpecial: true,   // At least one special character
+}
+
+// Example password validation function
+function validatePassword(password: string): { valid: boolean; errors: string[] } {
+  const errors: string[] = []
+  
+  if (password.length < 8) {
+    errors.push("Password must be at least 8 characters long")
+  }
+  if (!/[A-Z]/.test(password)) {
+    errors.push("Password must contain at least one uppercase letter")
+  }
+  if (!/[a-z]/.test(password)) {
+    errors.push("Password must contain at least one lowercase letter")
+  }
+  if (!/[0-9]/.test(password)) {
+    errors.push("Password must contain at least one number")
+  }
+  if (!/[!@#$%^&*(),.?":{}|<>]/.test(password)) {
+    errors.push("Password must contain at least one special character")
+  }
+  
+  return { valid: errors.length === 0, errors }
+}
+```
+
+**2. Password Storage and Hashing**
+
+Never store passwords in plain text. Use industry-standard hashing algorithms:
+
+- **Recommended**: bcrypt, Argon2, or scrypt
+- **Minimum Cost Factor**: bcrypt with cost factor of 12+
+- **Salt**: Automatically generated per password (handled by bcrypt)
+
+```typescript
+import bcrypt from 'bcrypt'
+
+// Hashing a password
+async function hashPassword(plainPassword: string): Promise<string> {
+  const saltRounds = 12
+  return await bcrypt.hash(plainPassword, saltRounds)
+}
+
+// Verifying a password
+async function verifyPassword(plainPassword: string, hashedPassword: string): Promise<boolean> {
+  return await bcrypt.compare(plainPassword, hashedPassword)
+}
+```
+
+**3. Username Best Practices**
+
+- **Email as Username**: Use email addresses as usernames for simplicity and password recovery
+- **Validation**: Validate email format using regex or validation libraries
+- **Uniqueness**: Ensure email addresses are unique in the database
+- **Case Sensitivity**: Store and compare emails in lowercase
+- **Verification**: Implement email verification for new accounts
+
+```typescript
+// Email validation
+function isValidEmail(email: string): boolean {
+  const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/
+  return emailRegex.test(email)
+}
+
+// Normalize email
+function normalizeEmail(email: string): string {
+  return email.toLowerCase().trim()
+}
+```
+
+**4. Account Security Features**
+
+Implement additional security measures:
+
+- **Rate Limiting**: Limit login attempts to prevent brute force attacks
+  - Max 5 failed attempts per 15 minutes
+  - Exponential backoff after repeated failures
+  
+- **Account Lockout**: Temporarily lock accounts after multiple failed login attempts
+  - Lock duration: 30 minutes after 5 failed attempts
+  - Email notification on account lockout
+  
+- **Password Reset Flow**:
+  1. User requests password reset
+  2. Generate secure, time-limited token (valid for 1 hour)
+  3. Send token via email
+  4. Validate token before allowing password change
+  5. Invalidate all existing sessions on password change
+  
+- **Two-Factor Authentication (2FA)**: Consider implementing TOTP-based 2FA for additional security
+  - Use libraries like `speakeasy` or `otpauth`
+  - Provide backup codes for account recovery
+  - Allow users to enable/disable 2FA in settings
+
+**5. Session Management**
+
+- **Session Duration**: Set reasonable session timeouts (e.g., 7 days for "remember me")
+- **Session Storage**: Use secure, httpOnly cookies for session tokens
+- **Session Invalidation**: Provide logout functionality that clears all session data
+- **Concurrent Sessions**: Allow users to view and revoke active sessions
+
+#### Implementation Architecture
+
+**Current Implementation Status:**
+
+The application currently includes:
+- Sign-in page (`/app/(auth)/sign-in/page.tsx`) with Google OAuth and email/password options
+- Sign-up page (`/app/(auth)/sign-up/page.tsx`) with account creation flows
+- Auth context (`/lib/auth-context.tsx`) for managing authentication state
+- Mock authentication for demonstration purposes
+
+**Production Implementation Checklist:**
+
+- [ ] Install NextAuth.js: `npm install next-auth`
+- [ ] Create `/app/api/auth/[...nextauth]/route.ts` for NextAuth configuration
+- [ ] Configure Google OAuth provider with credentials
+- [ ] Implement Credentials provider for email/password authentication
+- [ ] Set up database for user storage (PostgreSQL, MongoDB, etc.)
+- [ ] Implement password hashing with bcrypt
+- [ ] Add email verification workflow
+- [ ] Implement password reset functionality
+- [ ] Add rate limiting middleware
+- [ ] Configure session management with secure cookies
+- [ ] Add CSRF protection
+- [ ] Implement account lockout after failed attempts
+- [ ] Add audit logging for authentication events
+- [ ] Set up monitoring and alerts for suspicious activity
+
+#### Security Considerations
+
+**Data Protection:**
+- Never log or expose passwords, even in hashed form
+- Use environment variables for all secrets
+- Implement proper CORS policies
+- Use Content Security Policy (CSP) headers
+- Enable HTTPS Strict Transport Security (HSTS)
+
+**Input Validation:**
+- Sanitize all user inputs to prevent XSS attacks
+- Validate email formats and password requirements
+- Implement SQL injection prevention (use parameterized queries)
+- Limit input field lengths to prevent buffer overflow
+
+**Error Handling:**
+- Don't reveal whether an email exists during login
+- Use generic error messages: "Invalid email or password"
+- Log detailed errors server-side for debugging
+- Never expose stack traces to users
+
+**Compliance:**
+- GDPR: Implement data deletion and export features
+- CCPA: Provide privacy policy and data handling information
+- Password policies should comply with NIST guidelines
+- Implement proper consent mechanisms for data collection
+
+#### Testing Authentication
+
+Create comprehensive tests for authentication flows:
+
+```typescript
+// Example test cases
+describe('Authentication', () => {
+  describe('Sign Up', () => {
+    it('should create account with valid email and password')
+    it('should reject weak passwords')
+    it('should prevent duplicate email registration')
+    it('should send verification email')
+  })
+  
+  describe('Sign In', () => {
+    it('should authenticate with correct credentials')
+    it('should reject incorrect credentials')
+    it('should enforce rate limiting')
+    it('should lock account after failed attempts')
+  })
+  
+  describe('OAuth', () => {
+    it('should authenticate with Google OAuth')
+    it('should handle OAuth errors gracefully')
+    it('should create user profile from OAuth data')
+  })
+  
+  describe('Password Reset', () => {
+    it('should generate reset token')
+    it('should validate reset token expiry')
+    it('should update password with valid token')
+  })
+})
+```
+
 ## 🔍 Five Areas for UX Improvement
 
 ### 1. Enhanced Progress Visualization
